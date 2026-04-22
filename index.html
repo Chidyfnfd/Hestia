@@ -1,0 +1,1137 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Hestia - Gestión Económica</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+        }
+    </script>
+
+    <!-- FontAwesome para los íconos (Reemplaza a Lucide-React) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- React y ReactDOM -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    
+    <!-- Babel para compilar JSX en el navegador -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <style>
+        /* Ocultar barra de desplazamiento */
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+        .pb-safe { padding-bottom: env(safe-area-inset-bottom, 1rem); }
+
+        /* Animaciones para emular tailwindcss-animate */
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideInBottom { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        @keyframes zoomIn { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        
+        .animate-in.fade-in { animation: fadeIn var(--tw-duration, 500ms) ease-in-out forwards; }
+        .animate-in.slide-in-from-bottom { animation: slideInBottom var(--tw-duration, 300ms) ease-out forwards; }
+        .animate-in.slide-in-from-top-2 { animation: fadeIn var(--tw-duration, 200ms) ease-out forwards; }
+        .animate-in.zoom-in-95 { animation: zoomIn var(--tw-duration, 200ms) ease-out forwards; }
+        
+        .duration-200 { --tw-duration: 200ms; }
+        .duration-300 { --tw-duration: 300ms; }
+        .duration-500 { --tw-duration: 500ms; }
+    </style>
+</head>
+<body class="bg-gray-50 dark:bg-gray-950">
+    <!-- Contenedor principal de React -->
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useMemo } = React;
+
+        // --- ADAPTADOR DE ÍCONOS (Simula lucide-react usando FontAwesome) ---
+        const IconWrapper = ({ icon, size = 24, className = '' }) => (
+            <i className={`fas fa-${icon} ${className}`} style={{ fontSize: size, width: size, height: size, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}></i>
+        );
+
+        const Home = (p) => <IconWrapper icon="home" {...p} />;
+        const PieChart = (p) => <IconWrapper icon="chart-pie" {...p} />;
+        const Wallet = (p) => <IconWrapper icon="wallet" {...p} />;
+        const Info = (p) => <IconWrapper icon="info-circle" {...p} />;
+        const Plus = (p) => <IconWrapper icon="plus" {...p} />;
+        const Calculator = (p) => <IconWrapper icon="calculator" {...p} />;
+        const Moon = (p) => <IconWrapper icon="moon" {...p} />;
+        const Sun = (p) => <IconWrapper icon="sun" {...p} />;
+        const Edit2 = (p) => <IconWrapper icon="pen" {...p} />;
+        const Trash2 = (p) => <IconWrapper icon="trash" {...p} />;
+        const X = (p) => <IconWrapper icon="times" {...p} />;
+        const Check = (p) => <IconWrapper icon="check" {...p} />;
+        const Filter = (p) => <IconWrapper icon="filter" {...p} />;
+        const BarChart2 = (p) => <IconWrapper icon="chart-bar" {...p} />;
+        const TrendingUp = (p) => <IconWrapper icon="arrow-trend-up" {...p} />;
+        const ChevronDown = (p) => <IconWrapper icon="chevron-down" {...p} />;
+        const Settings = (p) => <IconWrapper icon="cog" {...p} />;
+        const Tag = (p) => <IconWrapper icon="tag" {...p} />;
+        const CreditCard = (p) => <IconWrapper icon="credit-card" {...p} />;
+        const User = (p) => <IconWrapper icon="user" {...p} />;
+        const Calendar = (p) => <IconWrapper icon="calendar" {...p} />;
+        const DollarSign = (p) => <IconWrapper icon="dollar-sign" {...p} />;
+
+        // --- CONFIGURACIÓN Y CONSTANTES ---
+        const APP_VERSION = '1.3.2'; // Versión actualizada con z-index corregido
+        const DEVELOPERS = 'Erika Milena Bernal Miranda y Juan Diego Quintero Zambrano';
+
+        const DEFAULT_CATEGORIES = ['Servicios', 'Transporte', 'Comida', 'Hogar'];
+        const DEFAULT_METHODS = ['Crédito', 'Efectivo', 'Ahorros', 'Débito', 'Transferencia'];
+        const DEFAULT_RESPONSIBLES = ['Yo', 'Madre', 'Padre', 'Hijo', 'Abuelo'];
+
+        // --- HOOK DE BASE DE DATOS LOCAL (Simulando LocalStorage) ---
+        const useLocalDB = (key, initialValue) => {
+            const [data, setData] = useState(() => {
+                try {
+                const item = window.localStorage.getItem(key);
+                return item ? JSON.parse(item) : initialValue;
+                } catch (error) {
+                return initialValue;
+                }
+            });
+
+            useEffect(() => {
+                window.localStorage.setItem(key, JSON.stringify(data));
+            }, [key, data]);
+
+            return [data, setData];
+        };
+
+        // --- COMPONENTE PRINCIPAL ---
+        function App() {
+            const [isLoading, setIsLoading] = useState(true);
+            const [darkMode, setDarkMode] = useLocalDB('hestia_dark_mode', false);
+            const [decimals, setDecimals] = useLocalDB('hestia_decimals', 0);
+            const [appScale, setAppScale] = useLocalDB('hestia_scale', 16);
+            const [activeTab, setActiveTab] = useState('inicio');
+            const [showAbout, setShowAbout] = useState(false);
+            const [logoHeaderError, setLogoHeaderError] = useState(false);
+
+            // Datos de la aplicación
+            const [expenses, setExpenses] = useLocalDB('hestia_expenses', []);
+            const [funds, setFunds] = useLocalDB('hestia_funds', []);
+            const [categories, setCategories] = useLocalDB('hestia_categories', DEFAULT_CATEGORIES);
+            const [methods, setMethods] = useLocalDB('hestia_methods', DEFAULT_METHODS);
+            const [responsibles, setResponsibles] = useLocalDB('hestia_responsibles', DEFAULT_RESPONSIBLES);
+
+            // Pantalla de carga inicial
+            useEffect(() => {
+                const timer = setTimeout(() => setIsLoading(false), 2000);
+                return () => clearTimeout(timer);
+            }, []);
+
+            // Manejo de Modo Oscuro
+            useEffect(() => {
+                if (darkMode) {
+                document.documentElement.classList.add('dark');
+                } else {
+                document.documentElement.classList.remove('dark');
+                }
+            }, [darkMode]);
+
+            const formatMoney = (val) => {
+                return `$${Number(val).toLocaleString(undefined, { 
+                minimumFractionDigits: decimals, 
+                maximumFractionDigits: decimals 
+                })}`;
+            };
+
+            if (isLoading) {
+                return <LoadingScreen />;
+            }
+
+            return (
+                <div className={`min-h-screen bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-100 font-sans transition-colors duration-300 w-full flex justify-center`}>
+                <style>{`:root { font-size: ${appScale}px; }`}</style>
+                <div className="w-full max-w-md bg-white dark:bg-gray-900 shadow-2xl relative flex flex-col h-screen overflow-hidden">
+                    
+                    {/* CABECERA */}
+                    <header className="flex justify-between items-center p-4 bg-[#E32636] text-white shadow-md z-10">
+                    <div className="w-9"></div> {/* Espaciador balanceado para quitar el icono de info */}
+                    
+                    <div className="flex-1 flex justify-center items-center">
+                        {!logoHeaderError ? (
+                        <img 
+                            src="LogoCabezaPag.png" 
+                            alt="HESTIA Logo" 
+                            onError={() => setLogoHeaderError(true)} 
+                            className="h-8 object-contain"
+                        />
+                        ) : (
+                        <h1 className="text-xl font-bold tracking-wider">HESTIA</h1>
+                        )}
+                    </div>
+
+                    <div className="w-9"></div> {/* Espaciador para centrar el logo */}
+                    </header>
+
+                    {/* CONTENIDO PRINCIPAL SEGÚN PESTAÑA */}
+                    <main className="flex-1 overflow-y-auto pb-24 p-4 scrollbar-hide">
+                    {activeTab === 'inicio' && (
+                        <TabInicio 
+                        expenses={expenses} setExpenses={setExpenses}
+                        categories={categories} methods={methods} responsibles={responsibles}
+                        setCategories={setCategories} setMethods={setMethods} setResponsibles={setResponsibles}
+                        formatMoney={formatMoney}
+                        />
+                    )}
+                    {activeTab === 'historial' && (
+                        <TabHistorial 
+                        expenses={expenses}
+                        categories={categories} methods={methods} responsibles={responsibles}
+                        formatMoney={formatMoney}
+                        />
+                    )}
+                    {activeTab === 'capital' && (
+                        <TabCapital 
+                        methods={methods} setMethods={setMethods}
+                        funds={funds} setFunds={setFunds}
+                        expenses={expenses} formatMoney={formatMoney}
+                        />
+                    )}
+                    {activeTab === 'configuracion' && (
+                        <TabConfiguracion 
+                        darkMode={darkMode} setDarkMode={setDarkMode}
+                        decimals={decimals} setDecimals={setDecimals}
+                        appScale={appScale} setAppScale={setAppScale}
+                        setShowAbout={setShowAbout}
+                        />
+                    )}
+                    </main>
+
+                    {/* NAVEGACIÓN INFERIOR */}
+                    <nav className="absolute bottom-0 w-full bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 flex justify-around items-center p-2 z-10 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] pb-safe">
+                    <NavItem icon={<Home size={22} />} label="Inicio" isActive={activeTab === 'inicio'} onClick={() => setActiveTab('inicio')} />
+                    <NavItem icon={<PieChart size={22} />} label="Historial" isActive={activeTab === 'historial'} onClick={() => setActiveTab('historial')} />
+                    <NavItem icon={<Wallet size={22} />} label="Capital" isActive={activeTab === 'capital'} onClick={() => setActiveTab('capital')} />
+                    <NavItem icon={<Settings size={22} />} label="Config" isActive={activeTab === 'configuracion'} onClick={() => setActiveTab('configuracion')} />
+                    </nav>
+
+                    {/* MODAL ACERCA DE (Movido su acceso a Configuración) */}
+                    {showAbout && (
+                    <Modal title="Información" onClose={() => setShowAbout(false)}>
+                        <div className="flex flex-col items-center text-center space-y-4">
+                        <div className="w-20 h-20 bg-[#E32636] rounded-2xl flex items-center justify-center text-white text-3xl font-bold shadow-lg">
+                            H
+                        </div>
+                        <div>
+                            <h2 className="text-2xl font-bold text-gray-800 dark:text-white">Hestia</h2>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">Gestión Económica</p>
+                        </div>
+                        <div className="w-full border-t border-gray-100 dark:border-gray-700 py-4 mt-2">
+                            <p className="text-gray-700 dark:text-gray-300"><strong>Versión:</strong> {APP_VERSION}</p>
+                            <p className="mt-1 text-gray-700 dark:text-gray-300"><strong>Desarrolladores:</strong><br/>{DEVELOPERS}</p>
+                        </div>
+                        </div>
+                    </Modal>
+                    )}
+                </div>
+                </div>
+            );
+        }
+
+        // --- PANTALLA DE CARGA ---
+        function LoadingScreen() {
+            const [logoError, setLogoError] = useState(false);
+
+            return (
+                <div className="min-h-screen bg-[#E32636] flex flex-col items-center justify-center text-white w-full">
+                <div className="w-32 h-32 mb-6 bg-white rounded-3xl flex items-center justify-center shadow-2xl animate-pulse overflow-hidden p-2">
+                    {!logoError ? (
+                    <img 
+                        src="logocarga.png" 
+                        alt="Logo Carga" 
+                        onError={() => setLogoError(true)} 
+                        className="w-full h-full object-contain"
+                    />
+                    ) : (
+                    <span className="text-[#E32636] text-6xl font-black">H</span>
+                    )}
+                </div>
+                <h1 className="text-4xl font-extrabold tracking-widest mb-10">HESTIA</h1>
+                <div className="w-48 h-2 bg-red-400/50 rounded-full overflow-hidden">
+                    <div className="h-full bg-white animate-loading"></div>
+                </div>
+                <style>{`
+                    @keyframes loading { 0% { width: 0%; } 100% { width: 100%; } }
+                    .animate-loading { animation: loading 2s ease-in-out forwards; }
+                `}</style>
+                </div>
+            );
+        }
+
+        function NavItem({ icon, label, isActive, onClick }) {
+            return (
+                <button onClick={onClick} className={`flex flex-col items-center p-2 transition-all duration-200 ${isActive ? 'text-[#E32636] scale-110' : 'text-gray-400 hover:text-gray-600 dark:text-gray-500'}`}>
+                {icon}
+                <span className="text-[10px] mt-1 font-bold">{label}</span>
+                </button>
+            );
+        }
+
+        // --- SECCIÓN: INICIO ---
+        function TabInicio({ expenses, setExpenses, categories, methods, responsibles, setCategories, setMethods, setResponsibles, formatMoney }) {
+            const [showForm, setShowForm] = useState(false);
+            const [amount, setAmount] = useState('');
+            const [description, setDescription] = useState('');
+            const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+            const [category, setCategory] = useState(categories[0] || '');
+            const [method, setMethod] = useState(methods[0] || '');
+            const [responsible, setResponsible] = useState(responsibles[0] || '');
+            
+            const [showCalc, setShowCalc] = useState(false);
+            const [editingId, setEditingId] = useState(null);
+
+            useEffect(() => {
+                if(showForm && !editingId) {
+                if(!category && categories.length > 0) setCategory(categories[0]);
+                if(!method && methods.length > 0) setMethod(methods[0]);
+                if(!responsible && responsibles.length > 0) setResponsible(responsibles[0]);
+                }
+            }, [showForm, categories, methods, responsibles, editingId, category, method, responsible]);
+
+            const handleSave = (e) => {
+                if (e) e.preventDefault();
+                if (!amount || !description) return;
+
+                const expenseData = {
+                id: editingId || Date.now().toString(),
+                amount: parseFloat(amount),
+                description,
+                date: date || new Date().toISOString().split('T')[0],
+                category: category || 'General',
+                method: method || 'Efectivo',
+                responsible: responsible || 'Yo',
+                timestamp: Date.now()
+                };
+
+                if (editingId) {
+                setExpenses(expenses.map(ex => ex.id === editingId ? expenseData : ex));
+                setEditingId(null);
+                } else {
+                setExpenses([expenseData, ...expenses]);
+                }
+
+                setAmount('');
+                setDescription('');
+                setDate(new Date().toISOString().split('T')[0]);
+                setShowForm(false);
+            };
+
+            const handleEdit = (expense) => {
+                setEditingId(expense.id);
+                setAmount(expense.amount.toString());
+                setDescription(expense.description);
+                setDate(expense.date);
+                setCategory(expense.category);
+                setMethod(expense.method);
+                setResponsible(expense.responsible);
+                setShowForm(true);
+            };
+
+            const handleDelete = (id) => {
+                if(window.confirm('¿Desea eliminar este registro?')) {
+                setExpenses(expenses.filter(ex => ex.id !== id));
+                }
+            };
+
+            const sevenDaysAgo = new Date();
+            sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+            const recentExpenses = expenses.filter(ex => new Date(ex.date) >= sevenDaysAgo).slice(0, 10);
+
+            // Modales fuera del "animate-in" para evitar que el Navbar los cubra
+            return (
+                <>
+                <div className="space-y-6 animate-in fade-in duration-500 h-full relative">
+                <div className="bg-white dark:bg-gray-800 rounded-3xl p-5 shadow-sm border border-gray-100 dark:border-gray-700 min-h-[40vh]">
+                    <h3 className="font-bold text-gray-800 dark:text-white mb-4 flex items-center text-lg">
+                    <Calendar className="mr-2 text-[#E32636]" size={20}/> 
+                    Recientes (7 días)
+                    </h3>
+                    
+                    {recentExpenses.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center text-gray-400 py-10 opacity-50">
+                        <Check size={48} className="mb-2" />
+                        <p className="text-sm">Sin gastos registrados.</p>
+                    </div>
+                    ) : (
+                    <div className="space-y-3">
+                        {recentExpenses.map(ex => (
+                        <div key={ex.id} className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-900/50 rounded-2xl border border-gray-100 dark:border-gray-700 hover:shadow-md transition-shadow">
+                            <div className="flex-1 overflow-hidden pr-2">
+                            <p className="font-bold text-sm text-gray-800 dark:text-gray-200 truncate">{ex.description}</p>
+                            <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-0.5 font-medium uppercase tracking-wider">
+                                {ex.date} • {ex.category}
+                            </p>
+                            </div>
+                            <div className="flex items-center gap-3">
+                            <span className="font-extrabold text-[#E32636] whitespace-nowrap">{formatMoney(ex.amount)}</span>
+                            <div className="flex gap-1">
+                                <button onClick={() => handleEdit(ex)} className="p-1.5 text-gray-400 hover:text-blue-500 bg-white dark:bg-gray-800 rounded-lg shadow-sm"><Edit2 size={14}/></button>
+                                <button onClick={() => handleDelete(ex.id)} className="p-1.5 text-gray-400 hover:text-[#E32636] bg-white dark:bg-gray-800 rounded-lg shadow-sm"><Trash2 size={14}/></button>
+                            </div>
+                            </div>
+                        </div>
+                        ))}
+                    </div>
+                    )}
+                </div>
+
+                <div className="fixed bottom-24 right-6 z-20">
+                    <button 
+                    onClick={() => { setEditingId(null); setShowForm(true); }}
+                    className="bg-[#E32636] text-white p-4 rounded-full shadow-2xl hover:bg-red-700 hover:scale-110 transition-all active:scale-95"
+                    >
+                    <Plus size={32} />
+                    </button>
+                </div>
+                </div>
+
+                {/* MODALES INDEPENDIENTES DE LA ANIMACIÓN PARA GARANTIZAR Z-INDEX GLOBLAL */}
+                {showForm && (
+                    <div className="fixed inset-0 bg-black/70 z-[60] flex items-center justify-center backdrop-blur-sm p-4">
+                    <div className="bg-white dark:bg-gray-900 w-full max-w-md rounded-3xl p-6 shadow-2xl animate-in zoom-in-95 duration-300 max-h-[90vh] overflow-y-auto">
+                        <div className="flex justify-between items-center mb-6">
+                        <h2 className="text-xl font-black dark:text-white flex items-center">
+                            {editingId ? <Edit2 className="mr-2 text-[#E32636]" size={20}/> : <Plus className="mr-2 text-[#E32636]" size={20}/>}
+                            {editingId ? 'Editar Gasto' : 'Nuevo Gasto'}
+                        </h2>
+                        <button onClick={() => { setShowForm(false); setEditingId(null); }} className="p-2 bg-gray-100 dark:bg-gray-800 rounded-full text-gray-500">
+                            <X size={20} />
+                        </button>
+                        </div>
+                        
+                        <form onSubmit={handleSave} className="space-y-4">
+                        <div className="flex space-x-2">
+                            <div className="flex-1 relative">
+                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold">$</span>
+                            <input 
+                                type="number" step="0.01" inputMode="decimal"
+                                value={amount} onChange={(e) => setAmount(e.target.value)} 
+                                required placeholder="0.00" 
+                                className="w-full bg-gray-50 dark:bg-gray-800 border-2 border-transparent focus:border-[#E32636] rounded-2xl py-4 pl-8 pr-4 text-xl font-black outline-none dark:text-white transition-all" 
+                            />
+                            </div>
+                            <button type="button" onClick={() => setShowCalc(true)} className="bg-gray-100 dark:bg-gray-800 px-4 rounded-2xl text-[#E32636] border-2 border-transparent hover:border-[#E32636]">
+                            <Calculator size={24} />
+                            </button>
+                        </div>
+
+                        <input type="text" value={description} onChange={(e) => setDescription(e.target.value)} required placeholder="Descripción del gasto" className="w-full bg-gray-50 dark:bg-gray-800 border-2 border-transparent focus:border-[#E32636] rounded-2xl p-4 outline-none dark:text-white" />
+                        
+                        <div className="relative">
+                            <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={18} />
+                            <input 
+                            type="date" value={date} onChange={(e) => setDate(e.target.value)} 
+                            className="w-full bg-gray-50 dark:bg-gray-800 border-2 border-transparent focus:border-[#E32636] rounded-2xl p-4 pl-12 outline-none dark:text-white dark:[color-scheme:dark]" 
+                            />
+                        </div>
+
+                        <div className="flex gap-2 pt-2 w-full">
+                            <div className="flex-1">
+                                <FancyDropdown label="Uso" icon={Tag} value={category} onChange={setCategory} options={categories} setOptions={setCategories} isCompact={true} />
+                            </div>
+                            <div className="flex-1">
+                                <FancyDropdown label="Método" icon={CreditCard} value={method} onChange={setMethod} options={methods} setOptions={setMethods} isCompact={true} />
+                            </div>
+                            <div className="flex-1">
+                                <FancyDropdown label="Resp." icon={User} value={responsible} onChange={setResponsible} options={responsibles} setOptions={setResponsibles} isCompact={true} />
+                            </div>
+                        </div>
+
+                        <button type="submit" className="w-full bg-[#E32636] text-white font-black text-lg py-5 rounded-2xl shadow-xl hover:bg-red-700 active:scale-95 transition-all mt-4">
+                            {editingId ? 'ACTUALIZAR' : 'REGISTRAR'}
+                        </button>
+                        </form>
+                    </div>
+                    </div>
+                )}
+
+                {showCalc && <CalculatorModal onResult={(val) => { setAmount(val.toString()); setShowCalc(false); }} onClose={() => setShowCalc(false)} />}
+                </>
+            );
+        }
+
+        // --- SECCIÓN: HISTORIAL ---
+        function TabHistorial({ expenses, categories, methods, responsibles, formatMoney }) {
+            const [timeFilter, setTimeFilter] = useState('mes');
+            const [chartType, setChartType] = useState('torta');
+            
+            const [catFilter, setCatFilter] = useState('Todos');
+            const [methodFilter, setMethodFilter] = useState('Todos');
+            const [respFilter, setRespFilter] = useState('Todos');
+            const [dateRange, setDateRange] = useState({ start: '', end: '' });
+            const [showFilters, setShowFilters] = useState(false);
+
+            const filteredData = useMemo(() => {
+                let data = expenses;
+                const now = new Date();
+
+                if (timeFilter !== 'historico') {
+                data = data.filter(ex => {
+                    const d = ex.date ? new Date(ex.date) : new Date();
+                    if (timeFilter === 'año') return d.getFullYear() === now.getFullYear();
+                    if (timeFilter === 'mes') return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+                    if (timeFilter === 'semana') {
+                    const pastWeek = new Date(now); pastWeek.setDate(now.getDate() - 7);
+                    return d >= pastWeek;
+                    }
+                    if (timeFilter === 'dia') return d.toDateString() === now.toDateString();
+                    return true;
+                });
+                }
+
+                if (dateRange.start) data = data.filter(ex => ex.date && new Date(ex.date) >= new Date(dateRange.start));
+                if (dateRange.end) data = data.filter(ex => ex.date && new Date(ex.date) <= new Date(dateRange.end));
+                if (catFilter !== 'Todos') data = data.filter(ex => ex.category === catFilter);
+                if (methodFilter !== 'Todos') data = data.filter(ex => ex.method === methodFilter);
+                if (respFilter !== 'Todos') data = data.filter(ex => ex.responsible === respFilter);
+
+                return data.sort((a, b) => new Date(b.date) - new Date(a.date));
+            }, [expenses, timeFilter, catFilter, methodFilter, respFilter, dateRange]);
+
+            const total = filteredData.reduce((acc, curr) => acc + curr.amount, 0);
+
+            const chartData = useMemo(() => {
+                const grouped = {};
+                filteredData.forEach(ex => {
+                grouped[ex.category] = (grouped[ex.category] || 0) + ex.amount;
+                });
+                return Object.entries(grouped).map(([label, value]) => ({ label, value }));
+            }, [filteredData]);
+
+            const COLORS = ['#E32636', '#1F2937', '#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899'];
+
+            return (
+                <div className="space-y-5 animate-in fade-in duration-500">
+                <div className="bg-[#E32636] text-white rounded-3xl p-6 shadow-xl relative overflow-hidden">
+                    <div className="relative z-10">
+                    <div className="flex justify-between items-center mb-2">
+                        <h3 className="text-white/80 font-bold uppercase text-xs tracking-widest">Total Gastado</h3>
+                        <select 
+                        value={timeFilter} 
+                        onChange={e => setTimeFilter(e.target.value)}
+                        className="bg-white/20 border-none text-white text-xs font-bold px-2 py-1 rounded-lg outline-none"
+                        >
+                        <option value="dia" className="text-black">Día</option>
+                        <option value="semana" className="text-black">Semana</option>
+                        <option value="mes" className="text-black">Mes</option>
+                        <option value="año" className="text-black">Año</option>
+                        <option value="historico" className="text-black">Total</option>
+                        </select>
+                    </div>
+                    <p className="text-4xl font-black">{formatMoney(total)}</p>
+                    </div>
+                </div>
+
+                <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm border border-gray-100 dark:border-gray-700">
+                    <button onClick={() => setShowFilters(!showFilters)} className="flex items-center justify-between w-full text-gray-700 dark:text-white font-bold">
+                    <div className="flex items-center"><Filter size={18} className="mr-2 text-[#E32636]" /> Filtros Aplicados</div>
+                    <ChevronDown size={18} className={`transform transition-transform ${showFilters ? 'rotate-180' : ''}`} />
+                    </button>
+                    
+                    {showFilters && (
+                    <div className="mt-4 space-y-4 pt-4 border-t border-gray-100 dark:border-gray-700">
+                        <div className="grid grid-cols-2 gap-3 mb-2">
+                            <div className="flex flex-col">
+                                <label className="text-[10px] text-gray-500 uppercase font-bold mb-1 ml-1">Fecha Desde</label>
+                                <input type="date" value={dateRange.start} onChange={e => setDateRange({...dateRange, start: e.target.value})} className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-2.5 text-sm dark:text-white dark:[color-scheme:dark] outline-none focus:border-[#E32636] transition-colors" />
+                            </div>
+                            <div className="flex flex-col">
+                                <label className="text-[10px] text-gray-500 uppercase font-bold mb-1 ml-1">Fecha Hasta</label>
+                                <input type="date" value={dateRange.end} onChange={e => setDateRange({...dateRange, end: e.target.value})} className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-2.5 text-sm dark:text-white dark:[color-scheme:dark] outline-none focus:border-[#E32636] transition-colors" />
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-2">
+                        <select value={catFilter} onChange={e => setCatFilter(e.target.value)} className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm dark:text-white outline-none">
+                            <option value="Todos">Todas las Categorías</option>
+                            {categories.map(c => <option key={c} value={c}>{c}</option>)}
+                        </select>
+                        <select value={methodFilter} onChange={e => setMethodFilter(e.target.value)} className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm dark:text-white outline-none">
+                            <option value="Todos">Todos los Métodos</option>
+                            {methods.map(m => <option key={m} value={m}>{m}</option>)}
+                        </select>
+                        <select value={respFilter} onChange={e => setRespFilter(e.target.value)} className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm dark:text-white outline-none">
+                            <option value="Todos">Todos los Responsables</option>
+                            {responsibles.map(r => <option key={r} value={r}>{r}</option>)}
+                        </select>
+                        </div>
+                    </div>
+                    )}
+                </div>
+
+                <div className="bg-white dark:bg-gray-800 rounded-3xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
+                    <div className="flex justify-between items-center mb-6">
+                    <h3 className="font-black text-gray-800 dark:text-white">Estadísticas</h3>
+                    <div className="flex bg-gray-100 dark:bg-gray-900 rounded-xl p-1">
+                        <button onClick={() => setChartType('torta')} className={`p-2 rounded-lg ${chartType === 'torta' ? 'bg-white dark:bg-gray-700 shadow text-[#E32636]' : 'text-gray-400'}`}><PieChart size={18}/></button>
+                        <button onClick={() => setChartType('barras')} className={`p-2 rounded-lg ${chartType === 'barras' ? 'bg-white dark:bg-gray-700 shadow text-[#E32636]' : 'text-gray-400'}`}><BarChart2 size={18}/></button>
+                        <button onClick={() => setChartType('linea')} className={`p-2 rounded-lg ${chartType === 'linea' ? 'bg-white dark:bg-gray-700 shadow text-[#E32636]' : 'text-gray-400'}`}><TrendingUp size={18}/></button>
+                    </div>
+                    </div>
+
+                    {total === 0 ? (
+                    <div className="h-40 flex items-center justify-center text-gray-400 text-sm">Sin datos para visualizar</div>
+                    ) : (
+                    <div className="h-52 flex justify-center items-end relative">
+                        {chartType === 'torta' && <CustomPieChart data={chartData} colors={COLORS} total={total} formatMoney={formatMoney} />}
+                        {chartType === 'barras' && <CustomBarChart data={chartData} colors={COLORS} max={Math.max(...chartData.map(d => d.value))} formatMoney={formatMoney} />}
+                        {chartType === 'linea' && <CustomLineChart data={filteredData} formatMoney={formatMoney} />}
+                    </div>
+                    )}
+                </div>
+
+                <div className="bg-white dark:bg-gray-800 rounded-3xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
+                    <h3 className="font-bold text-gray-800 dark:text-white mb-4">Listado Filtrado ({filteredData.length})</h3>
+                    <div className="space-y-3">
+                    {filteredData.map(ex => (
+                        <div key={ex.id} className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-900/50 rounded-xl">
+                        <div className="flex-1 overflow-hidden pr-2">
+                            <p className="font-bold text-sm text-gray-800 dark:text-gray-200 truncate">{ex.description}</p>
+                            <p className="text-[10px] text-gray-500 uppercase">{ex.date} | {ex.method}</p>
+                        </div>
+                        <div className="font-black text-[#E32636]">{formatMoney(ex.amount)}</div>
+                        </div>
+                    ))}
+                    </div>
+                </div>
+                </div>
+            );
+        }
+
+        // --- SECCIÓN: CAPITAL ---
+        function TabCapital({ methods, setMethods, funds, setFunds, expenses, formatMoney }) {
+            const [showAddFund, setShowAddFund] = useState(false);
+            const [showAddAccount, setShowAddAccount] = useState(false);
+            
+            const [selectedMethod, setSelectedMethod] = useState(methods[0] || '');
+            const [fundAmount, setFundAmount] = useState('');
+            const [newAccountName, setNewAccountName] = useState('');
+
+            // Mantener seleccionado actualizado
+            useEffect(() => {
+                if(!methods.includes(selectedMethod) && methods.length > 0) setSelectedMethod(methods[0]);
+            }, [methods, selectedMethod]);
+
+            const calculateBalance = (methodName) => {
+                const totalFunds = funds.filter(f => f.method === methodName).reduce((acc, curr) => acc + curr.amount, 0);
+                const totalExpenses = expenses.filter(e => e.method === methodName).reduce((acc, curr) => acc + curr.amount, 0);
+                return totalFunds - totalExpenses;
+            };
+
+            const globalBalance = methods.reduce((acc, method) => acc + calculateBalance(method), 0);
+
+            const handleAddFund = (e) => {
+                e.preventDefault();
+                if (!fundAmount || !selectedMethod) return;
+                setFunds([...funds, { id: Date.now().toString(), method: selectedMethod, amount: parseFloat(fundAmount), date: new Date().toISOString() }]);
+                setFundAmount('');
+                setShowAddFund(false);
+            };
+
+            const handleAddAccount = (e) => {
+                e.preventDefault();
+                const val = newAccountName.trim();
+                if(val && !methods.includes(val)) {
+                    setMethods([...methods, val]);
+                    setSelectedMethod(val);
+                }
+                setNewAccountName('');
+                setShowAddAccount(false);
+            };
+
+            return (
+                <>
+                <div className="space-y-6 animate-in fade-in duration-500 relative">
+                <div className="text-center p-8 bg-white dark:bg-gray-800 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700">
+                    <p className="text-gray-400 text-[10px] font-black uppercase tracking-widest mb-1">Capital Disponible</p>
+                    <h2 className={`text-4xl font-black ${globalBalance >= 0 ? 'text-green-500' : 'text-[#E32636]'}`}>
+                    {formatMoney(globalBalance)}
+                    </h2>
+                </div>
+
+                <div className="flex justify-between items-center px-1">
+                    <h3 className="font-black text-gray-800 dark:text-white">Cuentas</h3>
+                    <div className="flex gap-2">
+                        <button onClick={() => setShowAddAccount(true)} className="bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white px-3 py-1.5 flex items-center rounded-xl font-bold text-xs hover:bg-gray-300 transition">
+                        <Plus size={14} className="mr-1" /> Cuenta
+                        </button>
+                        <button onClick={() => setShowAddFund(true)} className="bg-[#E32636] text-white px-3 py-1.5 flex items-center rounded-xl font-bold text-xs hover:bg-red-700 transition shadow-sm">
+                        <Plus size={14} className="mr-1" /> Fondos
+                        </button>
+                    </div>
+                </div>
+
+                <div className="space-y-3">
+                    {methods.map(method => {
+                    const balance = calculateBalance(method);
+                    return (
+                        <div key={method} className="flex justify-between items-center p-4 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
+                        <div className="flex items-center">
+                            <div className="w-10 h-10 rounded-full bg-red-50 dark:bg-red-900/20 flex items-center justify-center mr-3">
+                            <Wallet size={18} className="text-[#E32636]" />
+                            </div>
+                            <span className="font-bold text-gray-800 dark:text-gray-200">{method}</span>
+                        </div>
+                        <span className={`text-lg font-black ${balance >= 0 ? 'text-green-500' : 'text-[#E32636]'}`}>
+                            {formatMoney(balance)}
+                        </span>
+                        </div>
+                    );
+                    })}
+                </div>
+                </div>
+
+                {/* Modales de Capital en el Root para evitar el NavBar */}
+                {showAddFund && (
+                    <Modal title="Agregar Fondos" onClose={() => setShowAddFund(false)}>
+                    <form onSubmit={handleAddFund} className="space-y-4">
+                        <select value={selectedMethod} onChange={e => setSelectedMethod(e.target.value)} className="w-full p-4 bg-gray-50 dark:bg-gray-800 rounded-2xl outline-none font-bold dark:text-white">
+                        {methods.map(m => <option key={m} value={m}>{m}</option>)}
+                        </select>
+                        <input type="number" step="0.01" value={fundAmount} onChange={e => setFundAmount(e.target.value)} placeholder="0.00" className="w-full p-4 bg-gray-50 dark:bg-gray-800 rounded-2xl outline-none font-black text-xl dark:text-white" />
+                        <button type="submit" className="w-full bg-[#E32636] text-white font-black py-4 rounded-2xl mt-2">GUARDAR INGRESO</button>
+                    </form>
+                    </Modal>
+                )}
+
+                {showAddAccount && (
+                    <Modal title="Nueva Cuenta" onClose={() => setShowAddAccount(false)}>
+                    <form onSubmit={handleAddAccount} className="space-y-4">
+                        <input type="text" value={newAccountName} onChange={e => setNewAccountName(e.target.value)} placeholder="Nombre de la cuenta (ej. PayPal)" className="w-full p-4 bg-gray-50 dark:bg-gray-800 rounded-2xl outline-none font-bold dark:text-white" required autoFocus />
+                        <button type="submit" className="w-full bg-[#E32636] text-white font-black py-4 rounded-2xl mt-2">CREAR CUENTA</button>
+                    </form>
+                    </Modal>
+                )}
+                </>
+            );
+        }
+
+        // --- SECCIÓN: CONFIGURACIÓN ---
+        function TabConfiguracion({ darkMode, setDarkMode, decimals, setDecimals, appScale, setAppScale, setShowAbout }) {
+            return (
+                <div className="space-y-6 animate-in fade-in duration-500">
+                <h2 className="text-2xl font-black text-gray-800 dark:text-white mb-6">Configuración</h2>
+
+                <div className="bg-white dark:bg-gray-800 rounded-3xl p-5 shadow-sm border border-gray-100 dark:border-gray-700 space-y-6">
+                    <div className="flex justify-between items-center">
+                    <div className="flex items-center">
+                        {darkMode ? <Moon size={20} className="mr-3 text-indigo-400" /> : <Sun size={20} className="mr-3 text-yellow-500" />}
+                        <span className="font-bold">Modo Oscuro</span>
+                    </div>
+                    <button onClick={() => setDarkMode(!darkMode)} className={`w-12 h-6 rounded-full relative ${darkMode ? 'bg-[#E32636]' : 'bg-gray-300'}`}>
+                        <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${darkMode ? 'right-1' : 'left-1'}`}></div>
+                    </button>
+                    </div>
+
+                    <div className="space-y-3">
+                    <div className="flex items-center">
+                        <DollarSign size={20} className="mr-3 text-green-500" />
+                        <span className="font-bold">Decimales</span>
+                    </div>
+                    <div className="flex bg-gray-100 dark:bg-gray-900 rounded-xl p-1">
+                        {[0, 1, 2].map(n => (
+                        <button key={n} onClick={() => setDecimals(n)} className={`flex-1 py-2 rounded-lg font-black transition-all ${decimals === n ? 'bg-white dark:bg-gray-700 text-[#E32636]' : 'text-gray-400'}`}>{n}</button>
+                        ))}
+                    </div>
+                    </div>
+
+                    <div className="space-y-3 pt-4 border-t border-gray-100 dark:border-gray-700">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center">
+                        <Settings size={20} className="mr-3 text-blue-500" />
+                        <span className="font-bold">Tamaño de la App</span>
+                        </div>
+                        <span className="text-[10px] font-black text-[#E32636] bg-red-50 dark:bg-red-900/30 px-2 py-1 rounded-lg uppercase">{appScale}px</span>
+                    </div>
+                    <input 
+                        type="range" 
+                        min="12" max="22" step="1" 
+                        value={appScale} 
+                        onChange={(e) => setAppScale(Number(e.target.value))}
+                        className="w-full accent-[#E32636]"
+                    />
+                    <div className="flex justify-between text-[10px] text-gray-400 font-bold uppercase">
+                        <span>Pequeño</span>
+                        <span>Normal</span>
+                        <span>Grande</span>
+                    </div>
+                    </div>
+                </div>
+
+                <div className="bg-white dark:bg-gray-800 rounded-3xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
+                    <div className="flex justify-between items-center cursor-pointer" onClick={() => setShowAbout(true)}>
+                    <div className="flex items-center text-gray-800 dark:text-white">
+                        <Info size={20} className="mr-3 text-blue-500" />
+                        <span className="font-bold">Acerca de la App</span>
+                    </div>
+                    <ChevronDown size={18} className="text-gray-400 -rotate-90" />
+                    </div>
+                </div>
+                
+                <div className="p-4 text-center">
+                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Hestia Económica v{APP_VERSION}</p>
+                </div>
+                </div>
+            );
+        }
+
+        // --- COMPONENTES AUXILIARES ---
+        
+        function FancyDropdown({ label, icon: Icon, value, onChange, options, setOptions, isCompact = false }) {
+            const [isOpen, setIsOpen] = useState(false);
+            const [newVal, setNewVal] = useState('');
+
+            const handleAdd = () => {
+                const val = newVal.trim();
+                if (val && !options.includes(val)) {
+                setOptions([...options, val]);
+                onChange(val);
+                }
+                setNewVal('');
+                setIsOpen(false);
+            };
+
+            const handleKeyDown = (e) => {
+                if (e.key === 'Enter') {
+                e.preventDefault();
+                handleAdd();
+                }
+            };
+
+            const handleRemove = (e, opt) => {
+                e.stopPropagation();
+                if(window.confirm(`¿Quitar '${opt}'?`)) {
+                const filtered = options.filter(o => o !== opt);
+                setOptions(filtered);
+                if(value === opt) onChange(filtered[0] || '');
+                }
+            };
+
+            return (
+                <div className="relative w-full">
+                <div onClick={() => setIsOpen(!isOpen)} className={`w-full flex ${isCompact ? 'flex-col justify-center p-3' : 'items-center justify-between p-4'} bg-gray-50 dark:bg-gray-800 border-2 rounded-2xl cursor-pointer transition-all ${isOpen ? 'border-[#E32636]' : 'border-transparent'}`}>
+                    <div className={`flex ${isCompact ? 'flex-col items-center text-center' : 'items-center'} text-gray-700 dark:text-gray-200 w-full`}>
+                    {Icon && <Icon size={isCompact ? 16 : 18} className={`${isCompact ? 'mb-1.5' : 'mr-3'} ${isOpen ? 'text-[#E32636]' : 'text-gray-400'}`} />}
+                    <div className={`${isCompact ? 'w-full' : 'text-left'}`}>
+                        <span className={`text-[10px] text-gray-400 font-bold block leading-none ${isCompact ? 'mb-1' : 'mb-1'}`}>{label}</span>
+                        <span className={`font-black leading-none block truncate ${isCompact ? 'text-xs' : ''}`}>{value || 'Seleccionar'}</span>
+                    </div>
+                    </div>
+                    {!isCompact && <ChevronDown size={18} className={`text-gray-400 transform transition-transform ${isOpen ? 'rotate-180' : ''}`} />}
+                </div>
+
+                {isOpen && (
+                    <div className="fixed inset-0 bg-black/70 z-[70] flex items-center justify-center backdrop-blur-sm p-4 animate-in fade-in duration-200" onClick={() => setIsOpen(false)}>
+                        <div 
+                            className="bg-white dark:bg-gray-900 w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 max-h-[85vh] flex flex-col"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <div className="flex justify-between items-center p-5 border-b border-gray-100 dark:border-gray-700">
+                                <h3 className="font-black text-lg dark:text-white flex items-center">
+                                    {Icon && <Icon size={20} className="mr-2 text-[#E32636]" />}
+                                    {label}
+                                </h3>
+                                <button type="button" onClick={() => setIsOpen(false)} className="p-2 bg-gray-100 dark:bg-gray-800 rounded-full text-gray-500">
+                                    <X size={18} />
+                                </button>
+                            </div>
+                            <div className="flex-1 overflow-y-auto p-3">
+                                {options.map(opt => (
+                                <div key={opt} onClick={() => { onChange(opt); setIsOpen(false); }} className={`flex justify-between items-center p-4 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer ${value === opt ? 'bg-red-50 dark:bg-red-900/30 text-[#E32636]' : 'text-gray-600 dark:text-gray-300'}`}>
+                                    <span className="font-bold truncate pr-2">{opt}</span>
+                                    <button type="button" onClick={(e) => handleRemove(e, opt)} className="text-gray-300 hover:text-red-500 shrink-0"><Trash2 size={16} /></button>
+                                </div>
+                                ))}
+                            </div>
+                            <div className="p-3 border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 flex">
+                                <input 
+                                type="text" value={newVal} 
+                                onChange={e => setNewVal(e.target.value)} 
+                                onKeyDown={handleKeyDown}
+                                placeholder="Agregar nueva opción..." 
+                                className="flex-1 bg-white dark:bg-gray-800 rounded-l-xl px-4 py-3 text-sm outline-none dark:text-white min-w-0 border-2 border-transparent focus:border-[#E32636]"
+                                />
+                                <button type="button" onClick={handleAdd} className="bg-[#E32636] text-white px-5 rounded-r-xl font-black text-xl">+</button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+                </div>
+            );
+        }
+
+        // Aplicamos el z-index 60 al Modal principal para asegurar que esté sobre el Nav
+        function Modal({ title, onClose, children }) {
+            return (
+                <div className="fixed inset-0 bg-black/70 z-[60] flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-300">
+                <div className="bg-white dark:bg-gray-900 rounded-3xl w-full max-w-xs p-6 shadow-2xl animate-in zoom-in-95 duration-200">
+                    <div className="flex justify-between items-center mb-6">
+                    <h2 className="text-lg font-black dark:text-white uppercase tracking-wider">{title}</h2>
+                    <button onClick={onClose} className="text-gray-400 hover:text-red-500"><X size={20} /></button>
+                    </div>
+                    {children}
+                </div>
+                </div>
+            );
+        }
+
+        // --- CALCULADORA ADAPTABLE ---
+        function CalculatorModal({ onResult, onClose }) {
+            const [mode, setMode] = useState('simple'); // 'simple' | 'finance'
+            const [calc, setCalc] = useState('0');
+            const [memory, setMemory] = useState(0);
+            const [gt, setGt] = useState(0);
+
+            const evaluateStr = (expr) => {
+                try {
+                    const parsed = expr.replace(/x/g, '*').replace(/÷/g, '/');
+                    const res = new Function('return ' + parsed)();
+                    return Number.isFinite(res) ? Math.round(res * 10000) / 10000 : 0;
+                } catch {
+                    return 0;
+                }
+            };
+
+            const handle = (v) => {
+                if (v === 'AC') { setCalc('0'); setGt(0); setMemory(0); return; }
+                if (v === '⌫') { setCalc(calc.length > 1 ? calc.slice(0, -1) : '0'); return; }
+
+                if (v === '=') {
+                    const res = evaluateStr(calc);
+                    setGt(gt + res); 
+                    setCalc(res.toString());
+                    return;
+                }
+                if (v === 'M+') { setMemory(memory + evaluateStr(calc)); return; }
+                if (v === 'M-') { setMemory(memory - evaluateStr(calc)); return; }
+                if (v === 'MRC') { 
+                    setCalc(calc === '0' ? memory.toString() : calc + memory.toString()); 
+                    return; 
+                }
+                if (v === 'GT') {
+                    setCalc(calc === '0' ? gt.toString() : calc + gt.toString()); 
+                    return;
+                }
+                if (v === '√') {
+                    const res = evaluateStr(calc);
+                    setCalc((res >= 0 ? Math.sqrt(res) : 0).toString());
+                    return;
+                }
+                if (v === '%') {
+                    const res = evaluateStr(calc);
+                    setCalc((res / 100).toString());
+                    return;
+                }
+
+                if (calc === '0' && !['.', '00', '000', '+', '-', 'x', '÷'].includes(v)) {
+                    setCalc(v);
+                } else {
+                    setCalc(calc + v);
+                }
+            };
+
+            const simpleKeys = [
+                { id: 'AC', class: 'text-[#E32636] bg-red-50 dark:bg-red-900/20' },
+                { id: '⌫', class: 'text-[#E32636] bg-red-50 dark:bg-red-900/20' },
+                { id: '%', class: 'text-[#E32636] bg-red-50 dark:bg-red-900/20' },
+                { id: '÷', class: 'text-white bg-[#E32636] shadow-md' },
+                
+                { id: '7', class: 'bg-gray-50 dark:bg-gray-800' },
+                { id: '8', class: 'bg-gray-50 dark:bg-gray-800' },
+                { id: '9', class: 'bg-gray-50 dark:bg-gray-800' },
+                { id: 'x', class: 'text-white bg-[#E32636] shadow-md' },
+                
+                { id: '4', class: 'bg-gray-50 dark:bg-gray-800' },
+                { id: '5', class: 'bg-gray-50 dark:bg-gray-800' },
+                { id: '6', class: 'bg-gray-50 dark:bg-gray-800' },
+                { id: '-', class: 'text-white bg-[#E32636] shadow-md' },
+                
+                { id: '1', class: 'bg-gray-50 dark:bg-gray-800' },
+                { id: '2', class: 'bg-gray-50 dark:bg-gray-800' },
+                { id: '3', class: 'bg-gray-50 dark:bg-gray-800' },
+                { id: '+', class: 'text-white bg-[#E32636] shadow-md' },
+                
+                { id: '0', class: 'bg-gray-50 dark:bg-gray-800 col-span-2' },
+                { id: '.', class: 'bg-gray-50 dark:bg-gray-800' },
+                { id: '=', class: 'text-white bg-[#E32636] shadow-md' }
+            ];
+
+            const financeKeys = [
+                { id: 'GT', class: 'text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800' },
+                { id: 'M+', class: 'text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800' },
+                { id: 'M-', class: 'text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800' },
+                { id: 'MRC', class: 'text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800' },
+                
+                { id: 'AC', class: 'text-[#E32636] bg-red-50 dark:bg-red-900/20' },
+                { id: '⌫', class: 'text-[#E32636] bg-red-50 dark:bg-red-900/20' },
+                { id: '√', class: 'text-[#E32636] bg-red-50 dark:bg-red-900/20' },
+                { id: '÷', class: 'text-white bg-[#E32636] shadow-md' },
+                
+                { id: '7', class: 'bg-gray-50 dark:bg-gray-800' },
+                { id: '8', class: 'bg-gray-50 dark:bg-gray-800' },
+                { id: '9', class: 'bg-gray-50 dark:bg-gray-800' },
+                { id: 'x', class: 'text-white bg-[#E32636] shadow-md' },
+                
+                { id: '4', class: 'bg-gray-50 dark:bg-gray-800' },
+                { id: '5', class: 'bg-gray-50 dark:bg-gray-800' },
+                { id: '6', class: 'bg-gray-50 dark:bg-gray-800' },
+                { id: '-', class: 'text-white bg-[#E32636] shadow-md' },
+                
+                { id: '1', class: 'bg-gray-50 dark:bg-gray-800' },
+                { id: '2', class: 'bg-gray-50 dark:bg-gray-800' },
+                { id: '3', class: 'bg-gray-50 dark:bg-gray-800' },
+                { id: '+', class: 'text-white bg-[#E32636] shadow-md row-span-2' },
+                
+                { id: '0', class: 'bg-gray-50 dark:bg-gray-800' },
+                { id: '00', class: 'bg-gray-50 dark:bg-gray-800 text-sm' },
+                { id: '.', class: 'bg-gray-50 dark:bg-gray-800' },
+            ];
+
+            const activeKeys = mode === 'simple' ? simpleKeys : financeKeys;
+
+            // Z-Index 70 asegurado para la calculadora por sobre todos los elementos
+            return (
+                <div className="fixed inset-0 bg-black/70 z-[70] flex items-center justify-center p-3 sm:p-4 backdrop-blur-sm animate-in fade-in duration-300">
+                <div className="bg-white dark:bg-gray-900 w-full max-w-sm rounded-3xl p-4 sm:p-6 shadow-2xl relative overflow-hidden flex flex-col">
+                    
+                    {/* Pestañas (Modo) */}
+                    <div className="flex bg-gray-100 dark:bg-gray-800 p-1 rounded-2xl mb-4 relative z-10 shadow-inner">
+                    <button 
+                        onClick={() => setMode('simple')} 
+                        className={`flex-1 py-2.5 text-xs font-black uppercase tracking-wider rounded-xl transition-all ${mode === 'simple' ? 'bg-white dark:bg-gray-700 text-[#E32636] shadow-md' : 'text-gray-500'}`}
+                    >
+                        Simple
+                    </button>
+                    <button 
+                        onClick={() => setMode('finance')} 
+                        className={`flex-1 py-2.5 text-xs font-black uppercase tracking-wider rounded-xl transition-all ${mode === 'finance' ? 'bg-white dark:bg-gray-700 text-[#E32636] shadow-md' : 'text-gray-500'}`}
+                    >
+                        Finanzas
+                    </button>
+                    </div>
+
+                    {/* Display Pantalla */}
+                    <div className="bg-gray-50 dark:bg-gray-800 border-2 border-transparent focus-within:border-[#E32636] p-4 rounded-3xl mb-4 flex flex-col justify-between shadow-inner relative transition-colors h-28">
+                    <div className="flex justify-between items-center mb-1 h-4">
+                        <div className="flex space-x-2 text-[10px] font-black text-gray-400">
+                        {memory !== 0 && <span className="bg-gray-200 dark:bg-gray-700 px-1.5 py-0.5 rounded-md">M</span>}
+                        {gt !== 0 && <span className="bg-gray-200 dark:bg-gray-700 px-1.5 py-0.5 rounded-md">GT</span>}
+                        </div>
+                        {mode === 'finance' && <div className="text-[9px] font-black text-gray-400 tracking-widest uppercase">Financiera</div>}
+                    </div>
+                    <div className="text-gray-900 dark:text-white text-right text-4xl overflow-hidden truncate font-black tracking-tighter">
+                        {calc}
+                    </div>
+                    </div>
+
+                    {/* Teclado Integrado */}
+                    <div className="grid grid-cols-4 gap-2 sm:gap-3 mb-4">
+                    {activeKeys.map((k, i) => (
+                        <button 
+                        key={i} 
+                        onClick={() => handle(k.id)}
+                        className={`rounded-2xl shadow-sm flex items-center justify-center font-black text-xl active:scale-90 transition-all py-3 sm:py-4 hover:brightness-95 dark:hover:brightness-110 dark:text-white ${k.class}`}
+                        >
+                        {k.id}
+                        </button>
+                    ))}
+                    {mode === 'finance' && (
+                        <button 
+                        onClick={() => handle('=')}
+                        className="col-span-4 rounded-2xl shadow-md flex items-center justify-center font-black text-xl active:scale-90 transition-all py-3 sm:py-4 text-white bg-[#E32636] hover:bg-red-700"
+                        >
+                        =
+                        </button>
+                    )}
+                    </div>
+
+                    {/* Controles de Acción (Salir / Usar) */}
+                    <div className="flex gap-3 pt-2 border-t border-gray-100 dark:border-gray-800">
+                    <button onClick={onClose} className="bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 px-4 py-4 rounded-2xl font-bold flex-1 transition-colors hover:bg-gray-200 dark:hover:bg-gray-700">Cancelar</button>
+                    <button onClick={() => onResult(evaluateStr(calc))} className="bg-[#E32636] text-white px-4 py-4 rounded-2xl font-black flex-1 shadow-lg hover:bg-red-700 transition-colors active:scale-95">Usar Valor</button>
+                    </div>
+
+                </div>
+                </div>
+            );
+        }
+
+        // --- GRÁFICOS PERSONALIZADOS ---
+        function CustomPieChart({ data, colors, total, formatMoney }) {
+            let acc = 0;
+            const stops = data.map((d, i) => {
+                const p = (d.value / total) * 100;
+                const s = acc; acc += p;
+                return `${colors[i % colors.length]} ${s}% ${acc}%`;
+            }).join(', ');
+
+            return (
+                <div className="relative w-44 h-44 rounded-full shadow-inner border-4 border-white dark:border-gray-800" style={{ background: `conic-gradient(${stops})` }}>
+                <div className="absolute inset-6 bg-white dark:bg-gray-800 rounded-full flex flex-col items-center justify-center text-center shadow-lg">
+                    <span className="text-[8px] font-black text-gray-400 uppercase tracking-tighter">TOTAL</span>
+                    <span className="font-black text-sm dark:text-white leading-none">{total > 9999 ? (total/1000).toFixed(1)+'k' : total.toFixed(0)}</span>
+                </div>
+                </div>
+            );
+        }
+
+        function CustomBarChart({ data, colors, max }) {
+            return (
+                <div className="w-full h-full flex items-end justify-around gap-2 px-2">
+                {data.map((d, i) => {
+                    const h = max === 0 ? 0 : (d.value / max) * 100;
+                    return (
+                    <div key={d.label} className="flex-1 flex flex-col items-center h-full justify-end">
+                        <div className="w-full max-w-[20px] rounded-t-lg transition-all duration-1000" style={{ height: `${h}%`, backgroundColor: colors[i % colors.length] }}></div>
+                    </div>
+                    );
+                })}
+                </div>
+            );
+        }
+
+        function CustomLineChart({ data }) {
+            const grouped = useMemo(() => {
+                const d = {}; data.forEach(ex => { const dt = ex.date; d[dt] = (d[dt] || 0) + ex.amount; });
+                return Object.keys(d).sort((a,b) => new Date(a)-new Date(b)).map(k => ({k, v: d[k]}));
+            }, [data]);
+
+            if (grouped.length < 2) return <div className="text-gray-400 text-xs">Datos insuficientes</div>;
+
+            const max = Math.max(...grouped.map(g => g.v));
+            const w = 200, h = 100;
+            const pts = grouped.map((g, i) => {
+                const x = (i / (grouped.length - 1)) * w;
+                const y = h - (g.v / (max || 1)) * h;
+                return `${x},${y}`;
+            }).join(' ');
+
+            return (
+                <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-full overflow-visible">
+                <polyline fill="none" stroke="#E32636" strokeWidth="3" strokeLinecap="round" points={pts} />
+                {grouped.map((g, i) => {
+                    const x = (i / (grouped.length - 1)) * w;
+                    const y = h - (g.v / (max || 1)) * h;
+                    return <circle key={i} cx={x} cy={y} r="3" fill="#E32636" stroke="white" strokeWidth="1" />;
+                })}
+                </svg>
+            );
+        }
+
+        // Renderizado del componente raíz
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+
+    </script>
+</body>
+</html>
