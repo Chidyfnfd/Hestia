@@ -4,8 +4,9 @@ Enlace del prototipo desplegado:
 https://hestia-embm-jdqz.netlify.app
 
 Instalador
+
 <a href="./Hestia.apk?raw=true">
-  <img src="https://img.shields.io/badge/Descargar-Hestia.apk-orange?style=for-the-badge&logo=android" alt="Descargar APK">
+   <img src="https://img.shields.io/badge/Descargar-Hestia.apk-success?style=for-the-badge&logo=android" alt="Descargar APK">
 </a>
 
 
