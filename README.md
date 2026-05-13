@@ -3,27 +3,30 @@ Hestia-Gestor Economico
 Enlace del prototipo desplegado: 
 https://hestia-embm-jdqz.netlify.app
 
+
 🏠 Hestia - Gestión Económica Personal
 
 Hestia es una aplicación web y móvil (APK) diseñada para el control exhaustivo de finanzas personales. Permite gestionar ingresos, gastos, ahorros y deudas con una interfaz moderna, oscura y minimalista, optimizada tanto para escritorio como para dispositivos móviles.
+
 
 🚀 Tecnologías Utilizadas
 
 El proyecto destaca por su arquitectura "Single-File Web App", donde toda la lógica y el diseño residen en un único punto de entrada para facilitar su portabilidad.
 
-Frontend Core: React 18 (vía CDN).
+- Frontend Core: React 18 (vía CDN).
 
-Estilos y UI: Tailwind CSS para un diseño responsivo y modo oscuro nativo.
+- Estilos y UI: Tailwind CSS para un diseño responsivo y modo oscuro nativo.
 
-Iconografía: FontAwesome 6 para elementos visuales intuitivos.
+- Iconografía: FontAwesome 6 para elementos visuales intuitivos.
 
-Gestión de Estado: Hooks de React (useState, useEffect, useMemo).
+- Gestión de Estado: Hooks de React (useState, useEffect, useMemo).
 
-Persistencia de Datos: localStorage del navegador (permitiendo uso offline).
+- Persistencia de Datos: localStorage del navegador (permitiendo uso offline).
 
-Visualización de Datos: Gráficos SVG personalizados generados dinámicamente.
+- Visualización de Datos: Gráficos SVG personalizados generados dinámicamente.
 
-Compilación Móvil: Capacitor de Ionic para la generación del APK de Android.
+- Compilación Móvil: Capacitor de Ionic para la generación del APK de Android.
+  
 
 🏗️ Arquitectura del Proyecto
 
@@ -46,6 +49,7 @@ History: Lista filtrable de movimientos con opción de eliminación.
 Charts: Renderizado de gráficos de tendencias mediante cálculos matemáticos sobre el historial.
 
 Savings & Debts: Módulos específicos para metas de ahorro y control de préstamos.
+
 
 🛠️ Funcionamiento Paso a Paso
 
