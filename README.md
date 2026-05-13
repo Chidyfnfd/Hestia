@@ -3,13 +3,6 @@ Hestia-Gestor Economico
 Enlace del prototipo desplegado: 
 https://hestia-embm-jdqz.netlify.app
 
-Instalador
-
-<a href="./Hestia.apk?raw=true">
-   <img src="https://img.shields.io/badge/Descargar-Hestia.apk-success?style=for-the-badge&logo=android" alt="Descargar APK">
-</a>
-
-
 🏠 Hestia - Gestión Económica Personal
 
 Hestia es una aplicación web y móvil (APK) diseñada para el control exhaustivo de finanzas personales. Permite gestionar ingresos, gastos, ahorros y deudas con una interfaz moderna, oscura y minimalista, optimizada tanto para escritorio como para dispositivos móviles.
