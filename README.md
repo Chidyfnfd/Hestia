@@ -3,7 +3,7 @@ Hestia-Gestor Economico
 Enlace del prototipo desplegado: 
 https://hestia-embm-jdqz.netlify.app
 
-<a href="./Hestia.apk?raw=true">
+<a href="https://github.com/Chidyfnfd/Hestia/raw/main/Hestia.apk">
    <img src="https://img.shields.io/badge/Descargar-Hestia.apk-success?style=for-the-badge&logo=android" alt="Descargar APK">
 </a>
 
