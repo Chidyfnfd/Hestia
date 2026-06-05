@@ -7,6 +7,7 @@
     "lint": "eslint src/ --ext .js,.jsx"
   },
   "devDependencies": {
+    "@playwright/test": "^1.60.0",
     "serve": "^14.2.6"
   }
 }
