@@ -1,0 +1,12 @@
+{
+  "scripts": {
+  "start": "serve . -p 3000",
+  "build": "echo Build estatico listo",
+  "test": "jest --coverage --watchAll=false",
+  "test:e2e": "playwright test",
+  "lint": "eslint src/ --ext .js,.jsx"
+ },
+  "devDependencies": {
+    "serve": "^14.2.6"
+  }
+}
