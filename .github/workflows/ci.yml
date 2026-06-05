@@ -19,7 +19,7 @@ jobs:
 
       - name: Instalar dependencias
         working-directory: www
-        run: npm ci
+        run: npm ci --legacy-peer-deps
 
       - name: Build
         working-directory: www
@@ -36,3 +36,4 @@ jobs:
       - name: Tests E2E
         working-directory: www
         run: npx playwright test
+        
