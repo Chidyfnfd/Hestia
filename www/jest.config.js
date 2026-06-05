@@ -1,7 +1,5 @@
-// jest.config.js
 module.exports = {
   testEnvironment: 'jsdom',
-  setupFilesAfterFramework: ['@testing-library/jest-dom'],
   setupFilesAfterFramework: ['./jest.setup.js'],
   collectCoverage: true,
   coverageThreshold: {
@@ -19,4 +17,15 @@ module.exports = {
   moduleNameMapper: {
     '\\.(css|less|scss)$': '<rootDir>/__mocks__/styleMock.js',
   },
+  // Excluir tests E2E de Jest (los corre Playwright, no Jest)
+  testPathIgnorePatterns: [
+    '/node_modules/',
+    '/tests/e2e/',
+    '\\.spec\\.js$',
+  ],
+  // Solo incluir archivos de tests unitarios e integración
+  testMatch: [
+    '**/tests/unit/**/*.test.[jt]s?(x)',
+    '**/tests/integration/**/*.test.[jt]s?(x)',
+  ],
 };
