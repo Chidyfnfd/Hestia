@@ -85,7 +85,7 @@ const Calendar = p => React.createElement(IconWrapper, _extends({
 const DollarSign = p => React.createElement(IconWrapper, _extends({
   icon: "dollar-sign"
 }, p));
-const APP_VERSION = '1.4.1';
+const APP_VERSION = '1.4.2';
 const DEVELOPERS = 'Erika Milena Bernal Miranda y Juan Diego Quintero Zambrano';
 const DEFAULT_CATEGORIES = ['Servicios', 'Transporte', 'Comida', 'Hogar'];
 const DEFAULT_METHODS = ['Crédito', 'Efectivo', 'Ahorros', 'Débito', 'Transferencia'];
@@ -816,6 +816,13 @@ function TabCapital({
     setNewAccountName('');
     setShowAddAccount(false);
   };
+
+  const handleDeleteAccount = methodName => {
+    if (window.confirm(`¿Seguro que deseas eliminar la cuenta '${methodName}'? Se mantendrán los registros históricos pero no podrás seleccionarla para nuevos.`)) {
+      setMethods(methods.filter(m => m !== methodName));
+    }
+  };
+
   return React.createElement(React.Fragment, null, React.createElement("div", {
     className: "space-y-6 animate-in fade-in duration-500 relative"
   }, React.createElement("div", {
@@ -858,9 +865,16 @@ function TabCapital({
       className: "text-[#E32636]"
     })), React.createElement("span", {
       className: "font-bold text-gray-800 dark:text-gray-200"
-    }, method)), React.createElement("span", {
+    }, method)), React.createElement("div", {
+      className: "flex items-center gap-3"
+    }, React.createElement("span", {
       className: `text-lg font-black ${balance >= 0 ? 'text-green-500' : 'text-[#E32636]'}`
-    }, formatMoney(balance)));
+    }, formatMoney(balance)), React.createElement("button", {
+      onClick: () => handleDeleteAccount(method),
+      className: "text-gray-300 hover:text-red-500 transition-colors p-1"
+    }, React.createElement(Trash2, {
+      size: 16
+    }))));
   }))), showAddFund && React.createElement(Modal, {
     title: "Agregar Fondos",
     onClose: () => setShowAddFund(false)
