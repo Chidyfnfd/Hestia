@@ -1,6 +1,6 @@
 Hestia-Gestor Economico
 
-Enlace del prototipo desplegado: 
+Enlace del proyecto desplegado online: 
 https://hestia-embm-jdqz.netlify.app
 
 <a href="https://github.com/Chidyfnfd/Hestia/raw/main/Hestia.apk">
