@@ -85,7 +85,7 @@ const Calendar = p => React.createElement(IconWrapper, _extends({
 const DollarSign = p => React.createElement(IconWrapper, _extends({
   icon: "dollar-sign"
 }, p));
-const APP_VERSION = '1.4.2';
+const APP_VERSION = '1.4.3';
 const DEVELOPERS = 'Erika Milena Bernal Miranda y Juan Diego Quintero Zambrano';
 const DEFAULT_CATEGORIES = ['Servicios', 'Transporte', 'Comida', 'Hogar'];
 const DEFAULT_METHODS = ['Crédito', 'Efectivo', 'Ahorros', 'Débito', 'Transferencia'];
